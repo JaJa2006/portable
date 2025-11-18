@@ -28,7 +28,7 @@ def download_hf_file(repo_id, filename, local_dir="models"):
 # embedding Model Loader
 @st.cache_resource
 def load_embedding_model():
-    model_name = "Xenova/e5-large-v2"
+    model_name = "sentence-transformers/e5-base-v2"
     return SentenceTransformer(model_name)
 
 
@@ -171,3 +171,4 @@ if uploaded_file and groupings_file:
 
     st.subheader("Final Results")
     st.dataframe(pd.DataFrame(results))
+
