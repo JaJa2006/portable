@@ -149,7 +149,7 @@ if uploaded_file and groupings_file:
             llm_response = ai_check_group_match(threat_event, best_group, risk_info)
             if "NOT GOOD" in llm_response:
                 final_group = ai_propose_new_group(threat_event, risk_info)
-                indicator = "AI Created"
+                indicator = "AI Generated"
             else:
                 indicator = "Must Check"
         else:
@@ -158,7 +158,7 @@ if uploaded_file and groupings_file:
                 final_group = ai_propose_new_group(threat_event, risk_info)
                 indicator = "AI Generated"
             else:
-                final_group = f"AI_{best_group}"
+                final_group = {best_group}
                 indicator = "AI Verified"
 
         results.append({
@@ -171,6 +171,7 @@ if uploaded_file and groupings_file:
 
     st.subheader("Final Results")
     st.dataframe(pd.DataFrame(results))
+
 
 
 
