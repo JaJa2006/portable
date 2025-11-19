@@ -39,7 +39,7 @@ model = load_embedding_model()
 @st.cache_resource
 def load_llm():
     repo_id = "Qwen/Qwen2-0.5B-Instruct-GGUF"
-    file_name = "qwen2-0_5b-instruct-q8_0.gguf"
+    file_name = "qwen2-0_5b-instruct-q8_0.gguf" 
 
     model_path = download_hf_file(repo_id, file_name)
 
@@ -96,18 +96,18 @@ def ai_propose_new_group(threat_event, risk_info):
 def string_to_df(data_string):
     rows = data_string.split("<ROW>")
     parsed = []
-
     for row in rows:
         if not row.strip():
             continue
-        cols = row.split("<COL>")
+
+        col_pairs = row.split("<COL>")
         row_dict = {}
-        for col_pair in cols:
-            if "<COL>" in col_pair:
-                colname, value = col_pair.split("<COL>", 1)
+
+        for pair in col_pairs:
+            if "<SEP>" in pair:
+                colname, value = pair.split("<SEP>", 1)
                 row_dict[colname] = value
         parsed.append(row_dict)
-
     return pd.DataFrame(parsed)
 
 # upload text
@@ -188,5 +188,3 @@ if uploaded_file and groupings_file:
 
     st.subheader("Final Results")
     st.dataframe(pd.DataFrame(results))
-
-
