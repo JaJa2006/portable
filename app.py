@@ -39,7 +39,7 @@ model = load_embedding_model()
 @st.cache_resource
 def load_llm():
     repo_id = "Qwen/Qwen2-0.5B-Instruct-GGUF"
-    file_name = "qwen2-0_5b-instruct-q4_0.gguf"
+    file_name = "qwen2-0_5B-instruct-Q8_0.gguf"
 
     model_path = download_hf_file(repo_id, file_name)
 
@@ -92,22 +92,39 @@ def ai_propose_new_group(threat_event, risk_info):
     res = llm(full_prompt, max_tokens=40)
     return res["choices"][0]["text"].strip()
 
+# function to convert string data to dataframe
+def string_to_df(data_string):
+    rows = data_string.split("<ROW>")
+    parsed = []
 
-# upload file
-groupings_file = st.file_uploader("Upload Groupings Excel", type="xlsx")
+    for row in rows:
+        if not row.strip():
+            continue
+        cols = row.split("<COL>")
+        row_dict = {}
+        for col_pair in cols:
+            if "<COL>" in col_pair:
+                colname, value = col_pair.split("<COL>", 1)
+                row_dict[colname] = value
+        parsed.append(row_dict)
+
+    return pd.DataFrame(parsed)
+
+# upload text
+groupings_file = st.text_area("Enter Groupings Data:", height=200)
 
 if groupings_file:
-    groupings = pd.read_excel(groupings_file)
+    groupings = pd.string_to_df(groupings_file)
     group_embeddings = model.encode(
         groupings["Threat Event"].tolist(),
         normalize_embeddings=True
     )
 
-uploaded_file = st.file_uploader("Upload Threat Events Excel", type="xlsx")
+uploaded_file = st.text_area("Enter Threat Data:", height=200)
 
 if uploaded_file and groupings_file:
 
-    new_threats = pd.read_excel(uploaded_file)
+    new_threats = pd.string_to_df(uploaded_file)
 
     if "Threat Event" not in new_threats.columns:
         st.error("Uploaded file must have a 'Threat Event' column.")
@@ -171,8 +188,3 @@ if uploaded_file and groupings_file:
 
     st.subheader("Final Results")
     st.dataframe(pd.DataFrame(results))
-
-
-
-
-
