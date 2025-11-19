@@ -114,7 +114,7 @@ def string_to_df(data_string):
 groupings_file = st.text_area("Enter Groupings Data:", height=200)
 
 if groupings_file:
-    groupings = pd.string_to_df(groupings_file)
+    groupings = string_to_df(groupings_file)
     group_embeddings = model.encode(
         groupings["Threat Event"].tolist(),
         normalize_embeddings=True
@@ -124,7 +124,7 @@ uploaded_file = st.text_area("Enter Threat Data:", height=200)
 
 if uploaded_file and groupings_file:
 
-    new_threats = pd.string_to_df(uploaded_file)
+    new_threats = string_to_df(uploaded_file)
 
     if "Threat Event" not in new_threats.columns:
         st.error("Uploaded file must have a 'Threat Event' column.")
@@ -188,4 +188,5 @@ if uploaded_file and groupings_file:
 
     st.subheader("Final Results")
     st.dataframe(pd.DataFrame(results))
+
 
