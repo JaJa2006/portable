@@ -39,7 +39,7 @@ model = load_embedding_model()
 @st.cache_resource
 def load_llm():
     repo_id = "Qwen/Qwen2-0.5B-Instruct-GGUF"
-    file_name = "qwen2-0_5B-instruct-Q8_0.gguf"
+    file_name = "qwen2-0_5b-instruct-q8_0.gguf"
 
     model_path = download_hf_file(repo_id, file_name)
 
@@ -188,3 +188,4 @@ if uploaded_file and groupings_file:
 
     st.subheader("Final Results")
     st.dataframe(pd.DataFrame(results))
+
