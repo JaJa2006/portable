@@ -97,7 +97,8 @@ def string_to_df(data_string):
     rows = data_string.split("<ROW>")
     parsed = []
     for row in rows:
-        if not row.strip():
+        row = row.strip()
+        if not row:
             continue
 
         col_pairs = row.split("<COL>")
