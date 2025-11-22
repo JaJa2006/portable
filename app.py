@@ -129,25 +129,30 @@ def string_to_df(data_string):
 # upload text
 groupings_text = st.text_area("Enter Groupings Data:", height=200)
 
-if groupings_text:
+threat_text = st.text_area("Enter Threat Data:", height=200)
+
+if threat_text and groupings_text:
+    
     groupings_text = groupings_text.replace("\r", "").strip()
     groupings_text = groupings_text.replace("\n", "").strip()
+    groupings = string_to_df(groupings_text)
+    
+    if "Risk Scenario" not in groupings.columns or "Threat Event" not in groupings.columns or "Group Name" not in groupings.columns:
+        st.error("Uploaded file must have a 'Risk Scenario', 'Threat Event' and 'Group Name' column.")
+        st.stop()
+
+    threat_text = threat_text.replace("\r", "").strip()
+    threat_text = threat_text.replace("\n", "").strip()
+    new_threats = string_to_df(threat_text)
+    
     groupings = string_to_df(groupings_text)
     group_embeddings = model.encode(
         groupings["Threat Event"].tolist(),
         normalize_embeddings=True
     )
 
-threat_text = st.text_area("Enter Threat Data:", height=200)
-
-if threat_text and groupings_text:
-
-    threat_text = threat_text.replace("\r", "").strip()
-    threat_text = threat_text.replace("\n", "").strip()
-    new_threats = string_to_df(threat_text)
-
-    if "Threat Event" not in new_threats.columns:
-        st.error("Uploaded file must have a 'Threat Event' column.")
+    if "Risk Scenario" not in new_threats.columns or "Threat Event" not in new_threats.columns:
+        st.error("Uploaded file must have a 'Risk Scenario' and 'Threat Event' column.")
         st.stop()
 
     results = []
