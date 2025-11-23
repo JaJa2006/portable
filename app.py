@@ -137,6 +137,8 @@ if threat_text and groupings_text:
     groupings_text = groupings_text.replace("\n", "").strip()
     groupings = string_to_df(groupings_text)
     
+    group_embeddings = model.encode(groupings["Threat Event"].tolist(), normalize_embeddings=True)
+    
     if "Risk Scenario" not in groupings.columns or "Threat Event" not in groupings.columns or "Group Name" not in groupings.columns:
         st.error("Grouping data must have a 'Risk Scenario', 'Threat Event' and 'Group Name' column.")
         st.stop()
@@ -144,12 +146,6 @@ if threat_text and groupings_text:
     threat_text = threat_text.replace("\r", "").strip()
     threat_text = threat_text.replace("\n", "").strip()
     new_threats = string_to_df(threat_text)
-    
-    groupings = string_to_df(groupings_text)
-    group_embeddings = model.encode(
-        groupings["Threat Event"].tolist(),
-        normalize_embeddings=True
-    )
 
     if "Risk Scenario" not in new_threats.columns or "Threat Event" not in new_threats.columns:
         st.error("Threat data must have a 'Risk Scenario' and 'Threat Event' column.")
@@ -162,66 +158,67 @@ if threat_text and groupings_text:
     progress_bar = st.progress(0)
     progress_text = st.empty()
 
-    for idx, row in new_threats.iterrows():
-        
-        # update progress bar
-        progress = (idx + 1) / total_rows
-        progress_bar.progress(progress)
-        progress_text.write(f"Processing row {idx + 1} / {total_rows}")
-        
-        
-        threat_event = row["Threat Event"]
-        risk_info = row.get("Risk Scenario", "")
+    with st.spinner(""):
+        for idx, row in new_threats.iterrows():
+            
+            # update progress bar
+            progress = (idx + 1) / total_rows
+            progress_bar.progress(progress)
+            progress_text.write(f"Processing row {idx + 1} / {total_rows}")
+            
+            
+            threat_event = row["Threat Event"]
+            risk_info = row.get("Risk Scenario", "")
 
-        if pd.isna(threat_event) or str(threat_event).strip() in ["", "NA"]:
+            if pd.isna(threat_event) or str(threat_event).strip() in ["", "NA"]:
+                results.append({
+                    "ThreatEvent": threat_event,
+                    "BestGroup": "NA",
+                    "HighestAvgScore": "NA",
+                    "FinalGroup": "NA",
+                    "Indicator": "No Threat Event"
+                })
+                continue
+
+            event_emb = model.encode([threat_event], normalize_embeddings=True)
+            sims = util.cos_sim(event_emb, group_embeddings).numpy().flatten()
+
+            groupings["Similarity"] = sims
+            avg_scores = groupings.groupby("Group Name")["Similarity"].mean()
+
+            best_group = avg_scores.idxmax()
+            best_score = float(avg_scores.max() * 100)
+
+            indicator = ""
+            final_group = best_group
+
+            if best_score >= 90:
+                indicator = "Highly Accurate"
+            elif best_score >= 85:
+                indicator = "Moderately Accurate"
+            elif best_score >= 75:
+                llm_response = ai_check_group_match(threat_event, best_group, risk_info)
+                if "NOT GOOD" in llm_response:
+                    final_group = ai_propose_new_group(threat_event, risk_info)
+                    indicator = "AI Generated"
+                else:
+                    indicator = "Must Check"
+            else:
+                llm_response = ai_check_group_match(threat_event, best_group, risk_info)
+                if "NOT GOOD" in llm_response:
+                    final_group = ai_propose_new_group(threat_event, risk_info)
+                    indicator = "AI Generated"
+                else:
+                    final_group = {best_group}
+                    indicator = "AI Verified"
+
             results.append({
                 "ThreatEvent": threat_event,
-                "BestGroup": "NA",
-                "HighestAvgScore": "NA",
-                "FinalGroup": "NA",
-                "Indicator": "No Threat Event"
+                "BestGroup": best_group,
+                "HighestAvgScore": round(best_score, 2),
+                "FinalGroup": final_group,
+                "Indicator": indicator
             })
-            continue
-
-        event_emb = model.encode([threat_event], normalize_embeddings=True)
-        sims = util.cos_sim(event_emb, group_embeddings).numpy().flatten()
-
-        groupings["Similarity"] = sims
-        avg_scores = groupings.groupby("Group Name")["Similarity"].mean()
-
-        best_group = avg_scores.idxmax()
-        best_score = float(avg_scores.max() * 100)
-
-        indicator = ""
-        final_group = best_group
-
-        if best_score >= 90:
-            indicator = "Highly Accurate"
-        elif best_score >= 85:
-            indicator = "Moderately Accurate"
-        elif best_score >= 75:
-            llm_response = ai_check_group_match(threat_event, best_group, risk_info)
-            if "NOT GOOD" in llm_response:
-                final_group = ai_propose_new_group(threat_event, risk_info)
-                indicator = "AI Generated"
-            else:
-                indicator = "Must Check"
-        else:
-            llm_response = ai_check_group_match(threat_event, best_group, risk_info)
-            if "NOT GOOD" in llm_response:
-                final_group = ai_propose_new_group(threat_event, risk_info)
-                indicator = "AI Generated"
-            else:
-                final_group = {best_group}
-                indicator = "AI Verified"
-
-        results.append({
-            "ThreatEvent": threat_event,
-            "BestGroup": best_group,
-            "HighestAvgScore": round(best_score, 2),
-            "FinalGroup": final_group,
-            "Indicator": indicator
-        })
         
     progress_bar.empty()
     progress_text.empty()
